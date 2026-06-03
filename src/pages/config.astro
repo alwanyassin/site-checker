@@ -1,0 +1,403 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Firebase Setup" activePage="config">
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold text-white tracking-tight">Firebase Setup & Config</h2>
+    <p class="text-sm text-slate-400 mt-1">Konfigurasikan koneksi Cloud Firestore untuk sinkronisasi database pendataan sites.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Left Column: Status & Utilities -->
+    <div class="lg:col-span-4 flex flex-col gap-6">
+      <!-- Active Config Status Card -->
+      <div class="glass-panel p-6 rounded-2xl">
+        <h3 class="text-sm font-semibold text-slate-350 mb-4 uppercase tracking-wider">Status Database</h3>
+        
+        <div class="space-y-4">
+          <!-- Connection Badge -->
+          <div class="flex items-center gap-3">
+            <span id="cfg-status-indicator" class="flex h-3 w-3 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <div>
+              <span id="cfg-status-text" class="text-sm font-bold text-amber-500">Menghubungkan...</span>
+              <p id="cfg-source-text" class="text-[10px] text-slate-450 font-semibold tracking-wide uppercase mt-0.5">Membaca konfigurasi</p>
+            </div>
+          </div>
+
+          <hr class="border-slate-800/40" />
+
+          <!-- Config Values List -->
+          <div class="space-y-2 text-xs font-medium">
+            <div class="flex justify-between py-1">
+              <span class="text-slate-450">Project ID</span>
+              <span id="info-projectId" class="font-mono text-slate-300">-</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-slate-450">API Key</span>
+              <span id="info-apiKey" class="font-mono text-slate-300">-</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-slate-450 font-semibold text-slate-400">Total Records</span>
+              <span id="info-records" class="font-bold text-white">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cloudflare Pages & Production Guidelines -->
+      <div class="glass-panel p-6 rounded-2xl bg-blue-950/5 border-blue-500/10 text-slate-300">
+        <div class="flex items-center gap-2 text-blue-450 mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h4 class="text-xs font-bold uppercase tracking-wider">Cloudflare Pages Guide</h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">
+          Untuk hosting di <strong>Cloudflare Pages</strong>, masukkan variabel lingkungan (Environment Variables) berikut pada pengaturan proyek Cloudflare Pages Anda sebelum membangun aplikasi:
+        </p>
+        <ul class="text-[11px] font-mono space-y-1 bg-slate-900/60 p-3 rounded-xl border border-slate-850/80 text-slate-350">
+          <li>PUBLIC_FIREBASE_API_KEY</li>
+          <li>PUBLIC_FIREBASE_AUTH_DOMAIN</li>
+          <li>PUBLIC_FIREBASE_PROJECT_ID</li>
+          <li>PUBLIC_FIREBASE_STORAGE_BUCKET</li>
+          <li>PUBLIC_FIREBASE_MESSAGING_SENDER_ID</li>
+          <li>PUBLIC_FIREBASE_APP_ID</li>
+        </ul>
+      </div>
+
+      <!-- Maintenance Utilities Card -->
+      <div class="glass-panel p-6 rounded-2xl">
+        <h3 class="text-sm font-semibold text-slate-350 mb-3 uppercase tracking-wider">Pemeliharaan Data</h3>
+        <p class="text-xs text-slate-450 leading-relaxed mb-4">Seeding data awal untuk mengisi database Firestore atau LocalStorage dengan daftar sites default (e.g. suaramerdeka.com).</p>
+        
+        <button 
+          id="seed-db-btn"
+          class="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition-smooth border border-slate-750 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.21" />
+          </svg>
+          Reset & Seeding Database
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Column: Settings Form -->
+    <div class="lg:col-span-8">
+      <div class="glass-panel p-6 rounded-2xl">
+        <h3 class="text-md font-bold text-white mb-1">Form Konfigurasi Firebase</h3>
+        <p class="text-xs text-slate-400 mb-5">Simpan kredensial Firebase Firestore langsung di browser Anda untuk keperluan testing/staging lokal.</p>
+
+        <form id="config-form" class="space-y-4">
+          <!-- API Key Input -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">API Key</label>
+            <input 
+              type="password" 
+              id="cfg-apiKey" 
+              placeholder="Masukkan API Key (e.g. AIzaSy...)" 
+              class="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Project ID Input -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Project ID</label>
+              <input 
+                type="text" 
+                id="cfg-projectId" 
+                placeholder="e.g. my-project-id" 
+                class="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+              />
+            </div>
+
+            <!-- Auth Domain Input -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Auth Domain</label>
+              <input 
+                type="text" 
+                id="cfg-authDomain" 
+                placeholder="e.g. my-project-id.firebaseapp.com" 
+                class="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Storage Bucket Input -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Storage Bucket</label>
+              <input 
+                type="text" 
+                id="cfg-storageBucket" 
+                placeholder="e.g. my-project-id.appspot.com" 
+                class="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+              />
+            </div>
+
+            <!-- Messaging Sender ID Input -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-450 mb-1.5 uppercase tracking-wide text-slate-400">Messaging Sender ID</label>
+              <input 
+                type="text" 
+                id="cfg-messagingSenderId" 
+                placeholder="e.g. 123456789012" 
+                class="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <!-- App ID Input -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">App ID</label>
+            <input 
+              type="text" 
+              id="cfg-appId" 
+              placeholder="e.g. 1:123456789012:web:a1b2c3d4e5f6" 
+              class="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+            />
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center gap-3 pt-5 border-t border-slate-850/80 mt-6">
+            <button 
+              type="button" 
+              id="clear-config-btn" 
+              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-rose-300 font-semibold text-xs border border-slate-750 transition-smooth cursor-pointer"
+            >
+              Hapus Konfigurasi Browser
+            </button>
+            <button 
+              type="submit" 
+              class="w-full sm:w-auto sm:ml-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-lg shadow-blue-500/20 transition-smooth hover:-translate-y-0.5 cursor-pointer"
+            >
+              Simpan & Hubungkan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getFirebaseConfig, saveFirebaseConfigLocal, clearFirebaseConfigLocal, isUsingFirebase, initializeFirebase, prepopulateInitialSites, getSites } from '../lib/firebase';
+
+    // Toast notification
+    function showToast(message: string, type: 'success' | 'error' | 'info' = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-3 px-4 py-3.5 rounded-xl border shadow-xl transition-all duration-300 translate-y-2 opacity-0 select-none ${
+        type === 'success' ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-400' :
+        type === 'error' ? 'bg-rose-950/80 border-rose-500/30 text-rose-400' :
+        'bg-slate-900/80 border-slate-700/40 text-slate-300'
+      }`;
+
+      const icon = type === 'success' 
+        ? `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+        : type === 'error' 
+        ? `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+        : `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+
+      toast.innerHTML = `${icon}<span class="text-sm font-semibold">${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-[-4px]');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Mask sensitive keys
+    function maskKey(key: string): string {
+      if (!key) return '-';
+      if (key.length <= 8) return '********';
+      return `${key.substring(0, 6)}...${key.substring(key.length - 4)}`;
+    }
+
+    // Refresh Config Status UI
+    async function updateStatusUI() {
+      const active = isUsingFirebase();
+      const config = getFirebaseConfig();
+      
+      const indicator = document.getElementById('cfg-status-indicator');
+      const statusText = document.getElementById('cfg-status-text');
+      const sourceText = document.getElementById('cfg-source-text');
+      
+      const infoProjId = document.getElementById('info-projectId');
+      const infoApiKey = document.getElementById('info-apiKey');
+      const infoRecords = document.getElementById('info-records');
+
+      // Set connection indicators
+      if (active) {
+        if (indicator) {
+          indicator.innerHTML = `
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          `;
+        }
+        if (statusText) {
+          statusText.innerText = 'Firebase Terkoneksi';
+          statusText.className = 'text-sm font-bold text-emerald-400';
+        }
+        
+        // Find configuration source
+        const envProjId = import.meta.env.PUBLIC_FIREBASE_PROJECT_ID;
+        const localProjId = localStorage.getItem('fb_projectId');
+        
+        if (sourceText) {
+          if (envProjId && envProjId === config.projectId) {
+            sourceText.innerText = 'Sumber: Environment Variables (.env)';
+          } else if (localProjId && localProjId === config.projectId) {
+            sourceText.innerText = 'Sumber: Browser Storage (localStorage)';
+          } else {
+            sourceText.innerText = 'Sumber: Firebase Configured';
+          }
+        }
+      } else {
+        if (indicator) {
+          indicator.innerHTML = `
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+          `;
+        }
+        if (statusText) {
+          statusText.innerText = 'Mode Lokal (Fallback)';
+          statusText.className = 'text-sm font-bold text-amber-500';
+        }
+        if (sourceText) sourceText.innerText = 'Sumber: LocalStorage Mock Data';
+      }
+
+      // Populate info table
+      if (infoProjId) infoProjId.innerText = config.projectId || 'N/A';
+      if (infoApiKey) infoApiKey.innerText = maskKey(config.apiKey);
+      
+      try {
+        const sites = await getSites();
+        if (infoRecords) infoRecords.innerText = `${sites.length} sites`;
+      } catch (e) {
+        if (infoRecords) infoRecords.innerText = 'Error';
+      }
+
+      // Fill form values (only from localStorage for editing)
+      const inputApiKey = document.getElementById('cfg-apiKey') as HTMLInputElement;
+      const inputProjectId = document.getElementById('cfg-projectId') as HTMLInputElement;
+      const inputAuthDomain = document.getElementById('cfg-authDomain') as HTMLInputElement;
+      const inputStorageBucket = document.getElementById('cfg-storageBucket') as HTMLInputElement;
+      const inputMessagingSenderId = document.getElementById('cfg-messagingSenderId') as HTMLInputElement;
+      const inputAppId = document.getElementById('cfg-appId') as HTMLInputElement;
+
+      if (inputApiKey) inputApiKey.value = localStorage.getItem('fb_apiKey') || '';
+      if (inputProjectId) inputProjectId.value = localStorage.getItem('fb_projectId') || '';
+      if (inputAuthDomain) inputAuthDomain.value = localStorage.getItem('fb_authDomain') || '';
+      if (inputStorageBucket) inputStorageBucket.value = localStorage.getItem('fb_storageBucket') || '';
+      if (inputMessagingSenderId) inputMessagingSenderId.value = localStorage.getItem('fb_messagingSenderId') || '';
+      if (inputAppId) inputAppId.value = localStorage.getItem('fb_appId') || '';
+    }
+
+    // Save configuration form submit
+    const configForm = document.getElementById('config-form');
+    if (configForm) {
+      configForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const inputApiKey = (document.getElementById('cfg-apiKey') as HTMLInputElement).value.trim();
+        const inputProjectId = (document.getElementById('cfg-projectId') as HTMLInputElement).value.trim();
+        const inputAuthDomain = (document.getElementById('cfg-authDomain') as HTMLInputElement).value.trim();
+        const inputStorageBucket = (document.getElementById('cfg-storageBucket') as HTMLInputElement).value.trim();
+        const inputMessagingSenderId = (document.getElementById('cfg-messagingSenderId') as HTMLInputElement).value.trim();
+        const inputAppId = (document.getElementById('cfg-appId') as HTMLInputElement).value.trim();
+
+        if (!inputApiKey || !inputProjectId) {
+          showToast('API Key dan Project ID wajib diisi!', 'error');
+          return;
+        }
+
+        const newConfig = {
+          apiKey: inputApiKey,
+          projectId: inputProjectId,
+          authDomain: inputAuthDomain,
+          storageBucket: inputStorageBucket,
+          messagingSenderId: inputMessagingSenderId,
+          appId: inputAppId
+        };
+
+        saveFirebaseConfigLocal(newConfig);
+        
+        // Re-initialize connection
+        const initialized = initializeFirebase();
+        
+        if (initialized) {
+          showToast('Konfigurasi disimpan. Berhasil terhubung ke Cloud Firestore!', 'success');
+        } else {
+          showToast('Konfigurasi disimpan, namun Firebase gagal terhubung. Cek kredensial Anda.', 'error');
+        }
+
+        // Trigger UI updates & global indicators updates
+        updateStatusUI();
+        
+        // Dispatch custom event to notify Sidebar layout
+        window.dispatchEvent(new Event('DOMContentLoaded'));
+      });
+    }
+
+    // Clear config click event
+    const clearConfigBtn = document.getElementById('clear-config-btn');
+    if (clearConfigBtn) {
+      clearConfigBtn.addEventListener('click', () => {
+        clearFirebaseConfigLocal();
+        initializeFirebase(); // Reset app connection state
+        showToast('Konfigurasi browser dihapus. Kembali ke Mode Lokal.', 'info');
+        updateStatusUI();
+        window.dispatchEvent(new Event('DOMContentLoaded'));
+      });
+    }
+
+    // Seed/Reset database click event
+    const seedDbBtn = document.getElementById('seed-db-btn');
+    if (seedDbBtn) {
+      seedDbBtn.addEventListener('click', async () => {
+        const confirmReset = confirm('Tindakan ini akan me-reset database Anda kembali ke daftar sites awal (seperti suaramerdeka.com). Lanjutkan?');
+        if (!confirmReset) return;
+
+        seedDbBtn.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Membilas Database...
+        `;
+        seedDbBtn.setAttribute('disabled', 'true');
+
+        try {
+          await prepopulateInitialSites(true);
+          showToast('Database berhasil di-reset dan diisi ulang!', 'success');
+          updateStatusUI();
+        } catch (error) {
+          console.error(error);
+          showToast('Gagal membilas database.', 'error');
+        } finally {
+          seedDbBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.21" />
+            </svg>
+            Reset & Seeding Database
+          `;
+          seedDbBtn.removeAttribute('disabled');
+        }
+      });
+    }
+
+    // Run immediately
+    updateStatusUI();
+  </script>
+</Layout>

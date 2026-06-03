@@ -1,0 +1,463 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Bulk Site Lookup" activePage="lookup">
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold text-white tracking-tight">Bulk Site Lookup</h2>
+    <p class="text-sm text-slate-400 mt-1">Cari data lengkap beberapa site sekaligus dengan menginputkan daftar URL.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Left Column: Input Panel -->
+    <div class="lg:col-span-5 flex flex-col gap-5">
+      <div class="glass-panel p-6 rounded-2xl flex flex-col h-full">
+        <div class="flex items-center justify-between mb-4">
+          <label for="urls-input" class="text-sm font-semibold text-slate-350 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 text-blue-450" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Input Daftar URL Sites
+          </label>
+          <span id="urls-count-badge" class="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold font-mono text-slate-450 border border-slate-700/30">
+            0 URL terdeteksi
+          </span>
+        </div>
+
+        <textarea 
+          id="urls-input" 
+          rows="12" 
+          placeholder="Masukkan URL di sini...&#10;Contoh:&#10;suaramerdeka.com&#10;https://www.ayosemarang.com/news/123&#10;smol.id, solopos.com" 
+          class="w-full flex-1 p-4 rounded-xl glass-input text-sm font-mono leading-relaxed resize-none mb-4 min-h-[250px]"
+        ></textarea>
+
+        <div class="flex items-center gap-3">
+          <button 
+            id="clear-input-btn" 
+            class="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition-smooth border border-slate-750"
+          >
+            Bersihkan
+          </button>
+          <button 
+            id="lookup-search-btn" 
+            class="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 transition-smooth flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Cari Sites
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Results Panel -->
+    <div class="lg:col-span-7 flex flex-col">
+      <!-- Empty State -->
+      <div id="results-empty-state" class="glass-panel p-10 rounded-2xl flex flex-col items-center justify-center text-center h-full min-h-[400px]">
+        <div class="w-16 h-16 rounded-2xl bg-blue-600/10 text-blue-450 flex items-center justify-center mb-5 glow-blue">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.179 18.72l3-3m0 0l-3-3m3 3H9m3.75-9H15M9 10.5h.008v.008H9V10.5zm0 2.25h.008v.008H9v-.008zm0 2.25h.008v.008H9V15z" />
+          </svg>
+        </div>
+        <h3 class="text-md font-bold text-white mb-2">Belum Ada Pencarian</h3>
+        <p class="text-sm text-slate-400 max-w-sm">Masukkan daftar URL sites di panel sebelah kiri lalu tekan tombol "Cari Sites" untuk melihat data lengkapnya.</p>
+      </div>
+
+      <!-- Results Display (Hidden by default) -->
+      <div id="results-container" class="hidden flex-col h-full gap-5">
+        <!-- Results Tabs & Excel Button -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <!-- Tabs Navigation -->
+          <div class="flex p-1 rounded-xl bg-slate-900/60 border border-slate-800/80 w-fit shrink-0">
+            <button 
+              id="tab-found-btn"
+              class="px-4 py-2 rounded-lg text-xs font-bold text-blue-450 bg-blue-600/10 border border-blue-500/10 transition-smooth cursor-pointer"
+            >
+              Ditemukan (<span id="count-found">0</span>)
+            </button>
+            <button 
+              id="tab-missing-btn"
+              class="px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-smooth cursor-pointer"
+            >
+              Tidak Ditemukan (<span id="count-missing">0</span>)
+            </button>
+          </div>
+
+          <!-- Excel Export Button -->
+          <button 
+            id="export-excel-btn"
+            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm text-white shadow-lg shadow-emerald-500/20 transition-smooth hover:-translate-y-0.5 cursor-pointer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Ekspor ke Excel (.xlsx)
+          </button>
+        </div>
+
+        <!-- Tab Panel: Found Sites -->
+        <div id="panel-found" class="glass-panel rounded-2xl overflow-hidden flex-1 flex flex-col">
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full border-collapse text-left text-sm text-slate-300">
+              <thead class="bg-slate-900/50 border-b border-slate-850/80 text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                <tr>
+                  <th class="px-5 py-4 w-14">No</th>
+                  <th class="px-5 py-4 min-w-[180px]">URL Sites</th>
+                  <th class="px-5 py-4">ID Site</th>
+                  <th class="px-5 py-4">CMS</th>
+                  <th class="px-5 py-4">Template</th>
+                </tr>
+              </thead>
+              <tbody id="table-found-body" class="divide-y divide-slate-800/40">
+                <!-- Javascript insertion -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab Panel: Missing Sites (Hidden by default) -->
+        <div id="panel-missing" class="hidden glass-panel p-6 rounded-2xl flex-1">
+          <div class="flex items-center gap-3 p-4 bg-rose-950/15 border border-rose-500/10 rounded-xl mb-5 text-rose-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span class="text-xs font-semibold">Berikut adalah daftar URL yang diinputkan namun tidak terdaftar di database CMS perusahaan.</span>
+          </div>
+
+          <div class="max-h-[300px] overflow-y-auto pr-2">
+            <ul id="list-missing-body" class="space-y-2">
+              <!-- Javascript insertion -->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getSites, isUsingFirebase } from '../lib/firebase';
+    import * as XLSX from 'xlsx';
+
+    // State
+    let foundSites: any[] = [];
+    let missingUrls: string[] = [];
+
+    // Toast notification
+    function showToast(message: string, type: 'success' | 'error' | 'info' = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-3 px-4 py-3.5 rounded-xl border shadow-xl transition-all duration-300 translate-y-2 opacity-0 select-none ${
+        type === 'success' ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-400' :
+        type === 'error' ? 'bg-rose-950/80 border-rose-500/30 text-rose-400' :
+        'bg-slate-900/80 border-slate-700/40 text-slate-300'
+      }`;
+
+      const icon = type === 'success' 
+        ? `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+        : type === 'error' 
+        ? `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+        : `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+
+      toast.innerHTML = `${icon}<span class="text-sm font-semibold">${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-[-4px]');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Clean Input URL into root Domain name (e.g. suaramerdeka.com)
+    function cleanUrlToDomain(inputUrl: string): string {
+      let url = inputUrl.trim().toLowerCase();
+      if (!url) return '';
+      
+      // Remove protocol
+      url = url.replace(/^(https?:\/\/)?(www\.)?/, '');
+      
+      // Remove path and query string (take the host part)
+      url = url.split('/')[0];
+      
+      // Remove port if any
+      url = url.split(':')[0];
+      
+      return url;
+    }
+
+    // Count URLs in textarea
+    const urlsInput = document.getElementById('urls-input') as HTMLTextAreaElement;
+    const urlsCountBadge = document.getElementById('urls-count-badge');
+
+    function updateUrlCount() {
+      if (!urlsInput || !urlsCountBadge) return;
+      const text = urlsInput.value.trim();
+      if (!text) {
+        urlsCountBadge.innerText = '0 URL terdeteksi';
+        return;
+      }
+      
+      const list = text.split(/[\n, ]+/).filter(item => item.trim() !== '');
+      urlsCountBadge.innerText = `${list.length} URL terdeteksi`;
+    }
+
+    if (urlsInput) {
+      urlsInput.addEventListener('input', updateUrlCount);
+    }
+
+    // Lookup Trigger
+    const lookupSearchBtn = document.getElementById('lookup-search-btn');
+    if (lookupSearchBtn) {
+      lookupSearchBtn.addEventListener('click', async () => {
+        if (!urlsInput) return;
+
+        const fbActive = isUsingFirebase();
+        if (!fbActive) {
+          showToast('Database Firebase tidak terhubung. Silakan lakukan konfigurasi di menu Firebase Setup terlebih dahulu.', 'error');
+          return;
+        }
+
+        const text = urlsInput.value.trim();
+        if (!text) {
+          showToast('Masukkan minimal satu URL sites untuk melakukan pencarian!', 'error');
+          return;
+        }
+
+        // Add loading state
+        lookupSearchBtn.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Mencari...
+        `;
+        lookupSearchBtn.setAttribute('disabled', 'true');
+
+        try {
+          // Fetch database sites
+          const allDbSites = await getSites();
+
+          // Parse search input
+          const searchUrls = text.split(/[\n, ]+/)
+            .map(u => u.trim())
+            .filter(u => u !== '');
+
+          foundSites = [];
+          missingUrls = [];
+
+          const checkedDomains = new Set<string>();
+
+          searchUrls.forEach(urlInputStr => {
+            const domain = cleanUrlToDomain(urlInputStr);
+            if (!domain || checkedDomains.has(domain)) return;
+            
+            checkedDomains.add(domain);
+
+            // Find match by comparing cleaned domain strings on both sides
+            const match = allDbSites.find(s => cleanUrlToDomain(s.url) === domain);
+            if (match) {
+              foundSites.push({
+                originalInput: urlInputStr,
+                ...match
+              });
+            } else {
+              missingUrls.push(urlInputStr);
+            }
+          });
+
+          // Toggle screens
+          const emptyState = document.getElementById('results-empty-state');
+          const resultsContainer = document.getElementById('results-container');
+
+          if (emptyState) emptyState.classList.add('hidden');
+          if (resultsContainer) resultsContainer.classList.remove('hidden');
+
+          // Render results
+          renderResults();
+          showToast(`Pencarian selesai. Ditemukan: ${foundSites.length}, Tidak ditemukan: ${missingUrls.length}`, 'success');
+        } catch (error) {
+          console.error(error);
+          showToast('Terjadi kesalahan saat memproses data sites.', 'error');
+        } finally {
+          lookupSearchBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Cari Sites
+          `;
+          lookupSearchBtn.removeAttribute('disabled');
+        }
+      });
+    }
+
+    // Render results in tables and tabs
+    function renderResults() {
+      const countFoundSpan = document.getElementById('count-found');
+      const countMissingSpan = document.getElementById('count-missing');
+      const tableFoundBody = document.getElementById('table-found-body');
+      const listMissingBody = document.getElementById('list-missing-body');
+      const exportExcelBtn = document.getElementById('export-excel-btn') as HTMLButtonElement;
+
+      if (countFoundSpan) countFoundSpan.innerText = foundSites.length.toString();
+      if (countMissingSpan) countMissingSpan.innerText = missingUrls.length.toString();
+
+      // Render found list
+      if (tableFoundBody) {
+        if (foundSites.length === 0) {
+          tableFoundBody.innerHTML = `
+            <tr>
+              <td colspan="5" class="px-5 py-10 text-center text-slate-450 font-medium">
+                Tidak ada sites terdaftar yang cocok dengan pencarian Anda.
+              </td>
+            </tr>
+          `;
+          if (exportExcelBtn) exportExcelBtn.setAttribute('disabled', 'true');
+        } else {
+          if (exportExcelBtn) exportExcelBtn.removeAttribute('disabled');
+          tableFoundBody.innerHTML = '';
+          foundSites.forEach((site, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-800/20 transition-smooth border-b border-slate-900/40';
+            tr.innerHTML = `
+              <td class="px-5 py-3.5 text-slate-450 font-semibold font-mono">${idx + 1}</td>
+              <td class="px-5 py-3.5 font-bold text-white">${site.url}</td>
+              <td class="px-5 py-3.5"><span class="px-2 py-0.5 rounded-md bg-slate-800 font-mono font-bold text-xs text-slate-300 border border-slate-700/30">${site.siteId}</span></td>
+              <td class="px-5 py-3.5"><span class="px-2 py-0.5 rounded-md bg-purple-950/20 text-purple-400 border border-purple-500/15 text-xs font-bold">CMS ${site.cms}</span></td>
+              <td class="px-5 py-3.5"><span class="px-2.5 py-0.5 rounded-full bg-blue-950/20 text-blue-400 border border-blue-500/15 text-xs font-semibold uppercase tracking-wider">${site.template}</span></td>
+            `;
+            tableFoundBody.appendChild(tr);
+          });
+        }
+      }
+
+      // Render missing list
+      if (listMissingBody) {
+        if (missingUrls.length === 0) {
+          listMissingBody.innerHTML = `
+            <li class="text-sm text-slate-450 italic text-center py-6">Semua URL berhasil ditemukan di database.</li>
+          `;
+        } else {
+          listMissingBody.innerHTML = '';
+          missingUrls.forEach((url) => {
+            const li = document.createElement('li');
+            li.className = 'flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/40 border border-slate-850/80 text-sm';
+            li.innerHTML = `
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+              <span class="font-mono text-slate-350 break-all select-all">${url}</span>
+              <span class="ml-auto text-[10px] uppercase font-bold text-rose-500 tracking-wider">Not Found</span>
+            `;
+            listMissingBody.appendChild(li);
+          });
+        }
+      }
+
+      // Set active tab to found sites
+      switchTab('found');
+    }
+
+    // Tab switcher
+    function switchTab(tab: 'found' | 'missing') {
+      const btnFound = document.getElementById('tab-found-btn');
+      const btnMissing = document.getElementById('tab-missing-btn');
+      const panelFound = document.getElementById('panel-found');
+      const panelMissing = document.getElementById('panel-missing');
+
+      if (!btnFound || !btnMissing || !panelFound || !panelMissing) return;
+
+      if (tab === 'found') {
+        btnFound.className = 'px-4 py-2 rounded-lg text-xs font-bold text-blue-400 bg-blue-600/10 border border-blue-500/10 transition-smooth cursor-pointer';
+        btnMissing.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-smooth cursor-pointer';
+        panelFound.classList.remove('hidden');
+        panelFound.classList.add('flex');
+        panelMissing.classList.add('hidden');
+      } else {
+        btnMissing.className = 'px-4 py-2 rounded-lg text-xs font-bold text-blue-400 bg-blue-600/10 border border-blue-500/10 transition-smooth cursor-pointer';
+        btnFound.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-smooth cursor-pointer';
+        panelFound.classList.add('hidden');
+        panelFound.classList.remove('flex');
+        panelMissing.classList.remove('hidden');
+      }
+    }
+
+    // Tab buttons event listeners
+    const tabFoundBtn = document.getElementById('tab-found-btn');
+    const tabMissingBtn = document.getElementById('tab-missing-btn');
+
+    if (tabFoundBtn) tabFoundBtn.addEventListener('click', () => switchTab('found'));
+    if (tabMissingBtn) tabMissingBtn.addEventListener('click', () => switchTab('missing'));
+
+    // Clear Button Event
+    const clearInputBtn = document.getElementById('clear-input-btn');
+    if (clearInputBtn) {
+      clearInputBtn.addEventListener('click', () => {
+        if (urlsInput) {
+          urlsInput.value = '';
+          updateUrlCount();
+        }
+        
+        // Hide results panel, show empty state
+        const emptyState = document.getElementById('results-empty-state');
+        const resultsContainer = document.getElementById('results-container');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (resultsContainer) resultsContainer.classList.add('hidden');
+        
+        foundSites = [];
+        missingUrls = [];
+
+        showToast('Input pencarian dibersihkan', 'info');
+      });
+    }
+
+    // Export to Excel Event Handler
+    const exportExcelBtn = document.getElementById('export-excel-btn');
+    if (exportExcelBtn) {
+      exportExcelBtn.addEventListener('click', () => {
+        if (foundSites.length === 0) {
+          showToast('Tidak ada data sites ditemukan untuk diekspor', 'error');
+          return;
+        }
+
+        try {
+          // Format worksheet data
+          const worksheetData = foundSites.map((site, index) => ({
+            'No': index + 1,
+            'URL Sites': site.url,
+            'ID Site': site.siteId,
+            'CMS': site.cms,
+            'Template': site.template
+          }));
+
+          // Create worksheet and workbook
+          const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Lookup Results');
+
+          // Styling columns width
+          const max_len = Math.max(...foundSites.map(s => s.url.length), 10);
+          worksheet['!cols'] = [
+            { wch: 6 }, // No
+            { wch: max_len + 4 }, // URL
+            { wch: 10 }, // ID Site
+            { wch: 10 }, // CMS
+            { wch: 15 }  // Template
+          ];
+
+          // Write File
+          const filename = `hasil-lookup-sites-${new Date().toISOString().slice(0,10)}.xlsx`;
+          XLSX.writeFile(workbook, filename);
+          showToast(`Berhasil mengekspor ${foundSites.length} data sites ke file ${filename}`, 'success');
+        } catch (e) {
+          console.error(e);
+          showToast('Gagal mengekspor data ke Excel.', 'error');
+        }
+      });
+    }
+  </script>
+</Layout>
