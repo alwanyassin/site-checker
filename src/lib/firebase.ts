@@ -63,6 +63,7 @@ export function saveFirebaseConfigLocal(config: {
   localStorage.setItem('fb_storageBucket', config.storageBucket);
   localStorage.setItem('fb_messagingSenderId', config.messagingSenderId);
   localStorage.setItem('fb_appId', config.appId);
+  clearCachedSites();
 }
 
 export function clearFirebaseConfigLocal() {
@@ -73,6 +74,7 @@ export function clearFirebaseConfigLocal() {
   localStorage.removeItem('fb_storageBucket');
   localStorage.removeItem('fb_messagingSenderId');
   localStorage.removeItem('fb_appId');
+  clearCachedSites();
 }
 
 export function isUsingFirebase() {
@@ -106,8 +108,54 @@ export function initializeFirebase() {
   }
 }
 
+// SessionStorage cache helpers for Firestore Reads optimization
+const CACHE_KEY = 'fb_sites_cache';
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour cache lifetime
+
+function getCachedSites(): Site[] | null {
+  if (!isBrowser) return null;
+  try {
+    const cachedStr = sessionStorage.getItem(CACHE_KEY);
+    if (!cachedStr) return null;
+    
+    const cached = JSON.parse(cachedStr);
+    const now = Date.now();
+    
+    // Return cached data if not expired
+    if (now - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    } else {
+      sessionStorage.removeItem(CACHE_KEY);
+    }
+  } catch (e) {
+    console.warn('Failed to parse cached sites:', e);
+  }
+  return null;
+}
+
+function setCachedSites(data: Site[]) {
+  if (!isBrowser) return;
+  try {
+    const cachedObj = {
+      timestamp: Date.now(),
+      data
+    };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cachedObj));
+  } catch (e) {
+    console.warn('Failed to cache sites:', e);
+  }
+}
+
+export function clearCachedSites() {
+  if (!isBrowser) return;
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch (e) {}
+}
+
 export async function prepopulateInitialSites(force = false) {
   if (!isBrowser) return;
+  clearCachedSites();
 
   if (usingFirebase && db) {
     try {
@@ -135,8 +183,15 @@ export async function prepopulateInitialSites(force = false) {
   }
 }
 
-export async function getSites(): Promise<Site[]> {
+export async function getSites(forceRefresh = false): Promise<Site[]> {
   if (!isBrowser) return [];
+
+  if (!forceRefresh) {
+    const cached = getCachedSites();
+    if (cached) {
+      return cached;
+    }
+  }
 
   if (usingFirebase && db) {
     try {
@@ -153,7 +208,9 @@ export async function getSites(): Promise<Site[]> {
           createdAt: data.createdAt || new Date().toISOString()
         });
       });
-      return sites.sort((a, b) => a.siteId.localeCompare(b.siteId, undefined, { numeric: true }));
+      const sortedSites = sites.sort((a, b) => a.siteId.localeCompare(b.siteId, undefined, { numeric: true }));
+      setCachedSites(sortedSites);
+      return sortedSites;
     } catch (error) {
       console.error('Error fetching sites from Firestore:', error);
       throw error;
@@ -180,6 +237,7 @@ export async function addSite(site: Omit<Site, 'id'>): Promise<Site> {
 
   try {
     const docRef = await addDoc(collection(db, 'sites'), newSiteData);
+    clearCachedSites();
     return {
       id: docRef.id,
       ...newSiteData
@@ -207,6 +265,7 @@ export async function updateSite(id: string, updatedFields: Partial<Omit<Site, '
     const docRef = doc(db, 'sites', id);
     const { updateDoc: fbUpdateDoc } = await import('firebase/firestore'); // dynamic import safe
     await fbUpdateDoc(docRef, formattedFields);
+    clearCachedSites();
   } catch (error) {
     console.error('Firestore failed to update site:', error);
     throw error;
@@ -223,6 +282,7 @@ export async function deleteSite(id: string): Promise<void> {
   try {
     const docRef = doc(db, 'sites', id);
     await deleteDoc(docRef);
+    clearCachedSites();
   } catch (error) {
     console.error('Firestore failed to delete site:', error);
     throw error;

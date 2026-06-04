@@ -220,7 +220,7 @@ import Layout from '../layouts/Layout.astro';
 
         const fbActive = isUsingFirebase();
         if (!fbActive) {
-          showToast('Database Firebase tidak terhubung. Silakan lakukan konfigurasi di menu Firebase Setup terlebih dahulu.', 'error');
+          showToast('Database Firebase tidak terhubung. Silakan periksa file konfigurasi `.env` Anda.', 'error');
           return;
         }
 
