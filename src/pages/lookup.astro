@@ -252,13 +252,9 @@ import Layout from '../layouts/Layout.astro';
           foundSites = [];
           missingUrls = [];
 
-          const checkedDomains = new Set<string>();
-
           searchUrls.forEach(urlInputStr => {
             const domain = cleanUrlToDomain(urlInputStr);
-            if (!domain || checkedDomains.has(domain)) return;
-            
-            checkedDomains.add(domain);
+            if (!domain) return;
 
             // 1. Try to find an exact match first
             let match = allDbSites.find(s => cleanUrlToDomain(s.url) === domain);
