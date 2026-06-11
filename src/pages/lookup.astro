@@ -260,8 +260,19 @@ import Layout from '../layouts/Layout.astro';
             
             checkedDomains.add(domain);
 
-            // Find match by comparing cleaned domain strings on both sides
-            const match = allDbSites.find(s => cleanUrlToDomain(s.url) === domain);
+            // Find match by comparing cleaned domain strings on both sides (allowing partial matching for brand/domain parts)
+            const match = allDbSites.find(s => {
+              const dbDomain = cleanUrlToDomain(s.url);
+              if (dbDomain === domain) return true;
+              
+              if (!domain.includes('.')) {
+                const parts = dbDomain.split('.');
+                const nonTldParts = parts.slice(0, parts.length - 1);
+                return nonTldParts.some(part => part.includes(domain));
+              }
+              
+              return dbDomain.includes(domain) || domain.includes(dbDomain);
+            });
             if (match) {
               foundSites.push({
                 originalInput: urlInputStr,
